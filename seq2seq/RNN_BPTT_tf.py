@@ -134,7 +134,7 @@ class RNN_Truncated_BPTT:
         """
         for input in all_inputs:
             continue
-        
+        # test
         
         
         
