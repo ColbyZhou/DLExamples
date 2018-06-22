@@ -33,16 +33,25 @@ def get_raw_data(path):
 
 def gen_data(raw_inputs, raw_labels, batch_size, num_steps_k1, num_steps_k2):
     
-    size = len(raw_inputs) / batch_size / num_steps_k1
+    batch_len = len(raw_inputs) / batch_size
     # inputs: `self.num_steps_k2` tensors with shape: [batch_size, embed_dim]
     
+    batched_inputs = []
+    batched_labels = []
+    for i in range(batch_len):
+        s = i * batch_size
+        e = (i + 1) * batch_size
+        batched_inputs[i] = raw_inputs[s:e]
+        batched_labels[i] = raw_labels[s:e]
+    
+    size = batch_len / num_steps_k1
+
     for i in range(size):
+        end_idx = (i + 1) * num_steps_k1
+        start_idx = max(0, end_idx - num_steps_k2)
         
-        idx_start = i * num_steps_k1
-        idx_end = (i + 1) * num_steps_k1
-        
-        input_list = []
-        label_list = []
+        input_list = batched_inputs[: start_idx : end_idx]
+        label_list = batched_labels[: start_idx : end_idx]
         
         yield (input_list, label_list)
 

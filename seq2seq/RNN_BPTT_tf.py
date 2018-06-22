@@ -157,11 +157,14 @@ class RNN_Truncated_BPTT:
                 # get current input_list & label_list
                 # input_list: `self.num_steps_k2` tensors 
                 # with shape: [batch_size, embed_dim]
+                # (input_list size is `self.num_steps_k1` for first step)
+
                 
                 output_list, final_state = self.go_with_my_rnn(input_list, init_state)
                 
-                # outlist[k1 - 1] as init_state
-                init_state = output_list[num_steps_k1 - 1]
+                # output_list[k1 - 1] as init_state
+                last_state_idx = min(len(output_list) - 1, num_steps_k1 - 1)
+                init_state = output_list[last_state_idx]
 
 def main():
     
