@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Sat Jun 23 17:14:16 2018
+
+@author: zhouqiang02
+"""
+
 
 import tensorflow as tf
-import data_provider
+import raw_data_provider
+import data_transfer
 
 num_steps_k1 = 5
 num_steps_k2 = 10
@@ -150,21 +157,23 @@ class RNN_Truncated_BPTT:
         for num in range(epoch_num):
             # all_data: a list of tuple (input_list, label_list), 
             # including all data
-            all_data = data_provider.gen_data(raw_inputs, raw_labels,
-                        self.batch_size, self.num_steps_k1, self.num_steps_k2)
+            all_data = data_transfer.gen_data(raw_inputs, raw_labels,
+                            self.embed_dim, self.batch_size,
+                            self.num_steps_k1, self.num_steps_k2)
 
             for data_idx, (input_list, label_list) in enumerate(all_data):
                 # get current input_list & label_list
                 # input_list: `self.num_steps_k2` tensors 
                 # with shape: [batch_size, embed_dim]
                 # (input_list size is `self.num_steps_k1` for first step)
-
                 
                 output_list, final_state = self.go_with_my_rnn(input_list, init_state)
                 
                 # output_list[k1 - 1] as init_state
                 last_state_idx = min(len(output_list) - 1, num_steps_k1 - 1)
                 init_state = output_list[last_state_idx]
+                
+                # output layer
 
 def main():
     
@@ -172,7 +181,8 @@ def main():
                              embed_dim, learning_rate, init_state)
     
     # list of ids
-    raw_inputs, raw_labels = data_provider.get_raw_data()
+    data_path = ''
+    raw_inputs, raw_labels = raw_data_provider.get_raw_data(data_path)
     
     rnn.truncated_BPTT(raw_inputs, raw_labels, epoch_num)
     

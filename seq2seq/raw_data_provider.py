@@ -1,4 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Jun 23 17:39:26 2018
+
+@author: zhouqiang02
+"""
+
 import tensorflow as tf
+import numpy as np
 from tensorflow.models.tutorials.rnn.ptb import reader
 
 """
@@ -30,28 +38,3 @@ def get_data(n):
 def get_raw_data(path):
     
     return []
-
-def gen_data(raw_inputs, raw_labels, batch_size, num_steps_k1, num_steps_k2):
-    
-    batch_len = len(raw_inputs) / batch_size
-    # inputs: `self.num_steps_k2` tensors with shape: [batch_size, embed_dim]
-    
-    batched_inputs = []
-    batched_labels = []
-    for i in range(batch_len):
-        s = i * batch_size
-        e = (i + 1) * batch_size
-        batched_inputs[i] = raw_inputs[s:e]
-        batched_labels[i] = raw_labels[s:e]
-    
-    size = batch_len / num_steps_k1
-
-    for i in range(size):
-        end_idx = (i + 1) * num_steps_k1
-        start_idx = max(0, end_idx - num_steps_k2)
-        
-        input_list = batched_inputs[: start_idx : end_idx]
-        label_list = batched_labels[: start_idx : end_idx]
-        
-        yield (input_list, label_list)
-
