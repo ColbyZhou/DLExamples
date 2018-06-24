@@ -25,16 +25,11 @@ Or, you will get an import error.
 """
 
 
-raw_data = reader.ptb_raw_data('ptb_data')
-train_data, valid_data, test_data, voc_size = raw_data
+def get_all_raw_data():
+    raw_data = reader.ptb_raw_data('ptb_data')
+    return raw_data
 
-batch_size = 200
-num_steps = 5
-
-def get_data(n):
-    for i in range(n):
-         yield reader.ptb_producer(train_data, batch_size, num_steps)
-
-def get_raw_data(path):
-    
-    return []
+def get_label_by_data(data, end_id):
+    label_data = data[0:]
+    label_data.append(end_id)
+    return label_data

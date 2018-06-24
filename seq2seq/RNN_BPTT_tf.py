@@ -12,9 +12,12 @@ import data_transfer
 
 num_steps_k1 = 5
 num_steps_k2 = 10
+
 batch_size = 200
-state_size = 10
-embed_dim = 10
+state_size = 50
+
+#embed_dim = 10
+
 learning_rate = 0.01
 epoch_num = 1
 
@@ -39,7 +42,7 @@ class MyRNNCell:
                 name = 'b',
                 shape = [self.state_size],
                 initializer=tf.constant_initializer(0.0))
-    
+            
     def one_time_step(self, input, state):
         """
             input: [batch_size, embed_dim] tensor
@@ -73,37 +76,35 @@ class RNN_Truncated_BPTT:
         self.embed_dim = embed_dim
         self.learning_rate = learning_rate
         self.init_state = init_state
-    
-    def construct_data(self):
-        """
-            get placeholder for data
-        """
         
-        # need go self.num_steps_k2 steps, ever self.num_steps_k1 step
-        self.x = tf.placeholder(tf.int32, [self.batch_size, self.num_steps_k2],
-                                name='inputs')
-        self.y = tf.placeholder(tf.int32, [self.batch_size, self.num_steps_k2],
-                                name='labels')
+        self.my_rnn_cell = MyRNNCell(self.state_size, self.embed_dim)
+        self.tf_rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units = self.state_size)
+
+        self.o_W = tf.get_variable(
+                name = 'o_W',
+                shape = [self.state_size, self.embed_dim],
+                initializer=tf.constant_initializer(0.0))
+        self.o_b = tf.get_variable(
+                name = 'o_b',
+                shape = [self.state_size],
+                initializer=tf.constant_initializer(0.0))
         
-        # [batch_size, num_steps_k2, embed_dim]
-        self.x_one_hot = tf.one_hot(self.x, self.embed_dim)
         
-        # array of [batch_size, embed_dim] with length `num_steps_k2`
-        self.inputs_for_one_step = tf.unstack(self.x_one_hot, axis = 1)
+        self.sess = tf.Session()
+        self.optimizer = tf.train.AdadeltaOptimizer(self.learning_rate)
     
     def go_with_my_rnn(self, input_list, init_state):
         """
         build RNN
-        input_list: list of `num_steps` tensors with shape: [batch_size, embed_dim]
-        output_list: list of `num_steps` tensors with shape: [batch_size, state_size]
+        input_list: list of `num_steps_k2` tensors with shape: [batch_size, embed_dim]
+        output_list: list of `num_steps_k2` tensors with shape: [batch_size, state_size]
         final_state: last state
         """
-        cell = MyRNNCell(self.state_size, self.embed_dim)
         
         output_list = []
         state = init_state
         for input in input_list:
-            state = cell.one_time_step(input, state)
+            state = self.my_rnn_cell.one_time_step(input, state)
             output_list.append(state)
         final_state = output_list[-1]
         
@@ -112,16 +113,44 @@ class RNN_Truncated_BPTT:
     def go_with_tf_rnn(self, input_list, init_state):
         """
         build RNN
-        input_list: list of `num_steps` tensors with shape: [batch_size, embed_dim]
-        output_list: list of `num_steps` tensors with shape: [batch_size, state_size]
+        input_list: list of `num_steps_k2` tensors with shape: [batch_size, embed_dim]
+        output_list: list of `num_steps_k2` tensors with shape: [batch_size, state_size]
         final_state: last state
         """
         # use high-level api BasicRNNCell
-        cell = tf.contrib.rnn.BasicRNNCell(num_units=self.state_size)
         output_list, final_state = tf.contrib.rnn.static_rnn(
-                cell=cell, inputs=input_list, initial_state=init_state)
+                cell=self.tf_rnn_cell, inputs=input_list, initial_state=init_state)
         
         return output_list, final_state
+    
+    def output_layer(self, output_list, lable_list):
+        """
+        get loss of trainning exmples
+        output_list: list of `num_steps_k2` tensors with shape: [batch_size, state_size]
+        lable_list: same shape with output_list
+        """
+        losses = []
+        preds = []
+        # output_list length: num_steps_k2
+        for idx, output in enumerate(output_list):
+            # output shape: [batch_size, state_size]
+            logit = tf.matmul(
+                output,
+                self.o_W,
+            ) + self.o_b
+            
+            # logit & pred shape: [batch_size, embed_size]
+            pred = tf.nn.softmax(logit)
+            preds.append(pred)
+            label= lable_list[idx]
+            loss = tf.nn.softmax_cross_entropy_with_logits(labels = label,
+                                                          logits = logit)
+            losses.append(loss)
+        
+        # losses : num_steps_k2 rows, each's dim is [batch_size]
+        
+        total_loss = tf.reduce_mean(losses, axis = None)
+        return total_loss, preds
                 
     def truncated_BPTT(self, raw_inputs, raw_labels, epoch_num):
         """
@@ -160,13 +189,14 @@ class RNN_Truncated_BPTT:
             all_data = data_transfer.gen_data(raw_inputs, raw_labels,
                             self.embed_dim, self.batch_size,
                             self.num_steps_k1, self.num_steps_k2)
-
+            print("epoc: " + str(num))
             for data_idx, (input_list, label_list) in enumerate(all_data):
                 # get current input_list & label_list
                 # input_list: `self.num_steps_k2` tensors 
                 # with shape: [batch_size, embed_dim]
                 # (input_list size is `self.num_steps_k1` for first step)
                 
+                print("data idx: " + str(data_idx))
                 output_list, final_state = self.go_with_my_rnn(input_list, init_state)
                 
                 # output_list[k1 - 1] as init_state
@@ -174,38 +204,30 @@ class RNN_Truncated_BPTT:
                 init_state = output_list[last_state_idx]
                 
                 # output layer
+                total_loss, preds = self.output_layer(output_list, label_list)
+                training_step = self.optimizer.minize(total_loss)
+                train_loss, _ = self.sess.run([total_loss, training_step])
+                
+                print("train_loss at epoc" + str(num) + " data_idx: " 
+                      + str(data_idx) + ' : ' + str(train_loss))
+
 
 def main():
     
-    rnn = RNN_Truncated_BPTT(num_steps_k1, num_steps_k2, batch_size, state_size,
-                             embed_dim, learning_rate, init_state)
-    
     # list of ids
-    data_path = ''
-    raw_inputs, raw_labels = raw_data_provider.get_raw_data(data_path)
+    train_data, valid_data, test_data, voc_size = raw_data_provider.get_all_raw_data()
+    
+    raw_inputs = train_data
+    
+    embed_dim = voc_size + 1
+    raw_labels = raw_data_provider.get_label_by_data(raw_inputs, voc_size)
+    
+    rnn = RNN_Truncated_BPTT(num_steps_k1, num_steps_k2, batch_size, state_size,
+                         embed_dim, learning_rate, init_state)
     
     rnn.truncated_BPTT(raw_inputs, raw_labels, epoch_num)
     
     print("done")
-    
-        
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
