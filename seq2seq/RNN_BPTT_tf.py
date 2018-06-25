@@ -86,12 +86,13 @@ class RNN_Truncated_BPTT:
                 initializer=tf.constant_initializer(0.0))
         self.o_b = tf.get_variable(
                 name = 'o_b',
-                shape = [self.state_size],
+                shape = [self.embed_dim],
                 initializer=tf.constant_initializer(0.0))
         
-        
         self.sess = tf.Session()
-        self.optimizer = tf.train.AdadeltaOptimizer(self.learning_rate)
+        self.optimizer = tf.train.AdagradOptimizer(self.learning_rate)
+        #self.optimizer = tf.train.GradientDescentOptimizer(self.learning_rate)
+        #self.sess.run(tf.global_variables_initializer())
     
     def go_with_my_rnn(self, input_list, init_state):
         """
@@ -138,7 +139,7 @@ class RNN_Truncated_BPTT:
                 output,
                 self.o_W,
             ) + self.o_b
-            
+
             # logit & pred shape: [batch_size, embed_size]
             pred = tf.nn.softmax(logit)
             preds.append(pred)
@@ -182,6 +183,7 @@ class RNN_Truncated_BPTT:
         https://r2rt.com/recurrent-neural-networks-in-tensorflow-i.html
         
         """
+
         init_state = self.init_state
         for num in range(epoch_num):
             # all_data: a list of tuple (input_list, label_list), 
@@ -205,12 +207,14 @@ class RNN_Truncated_BPTT:
                 
                 # output layer
                 total_loss, preds = self.output_layer(output_list, label_list)
-                training_step = self.optimizer.minize(total_loss)
+                training_step = self.optimizer.minimize(total_loss)
+                
+                self.sess.run(tf.global_variables_initializer())
+                
                 train_loss, _ = self.sess.run([total_loss, training_step])
                 
                 print("train_loss at epoc" + str(num) + " data_idx: " 
                       + str(data_idx) + ' : ' + str(train_loss))
-
 
 def main():
     
@@ -229,14 +233,5 @@ def main():
     
     print("done")
 
-
-
-
-
-
-
-
-    
-        
-        
-        
+if __name__ == '__main__':
+    main()

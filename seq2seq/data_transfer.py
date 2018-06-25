@@ -11,17 +11,20 @@ import numpy as np
 def gen_data(raw_inputs, raw_labels, embed_dim, batch_size,
              num_steps_k1, num_steps_k2):
     
-    batch_len = len(raw_inputs) / batch_size
+    batch_len = len(raw_inputs) // batch_size
     
-    batched_inputs = np.zeros([batch_size, batch_len], dtype = tf.int32)
-    batched_labels = np.zeros([batch_size, batch_len], dtype = tf.int32)
+    batched_inputs = np.zeros([batch_size, batch_len])
+    batched_labels = np.zeros([batch_size, batch_len])
     for i in range(batch_size):
         s = i * batch_len
         e = (i + 1) * batch_len
         batched_inputs[i] = raw_inputs[s:e]
         batched_labels[i] = raw_labels[s:e]
-        
-    size = batch_len / num_steps_k1
+    
+#    batched_inputs = tf.convert_to_tensor(batched_inputs, dtype = tf.float64)
+#    batched_labels = tf.convert_to_tensor(batched_labels, dtype = tf.float64)
+    
+    size = batch_len // num_steps_k1
 
     for i in range(size):
         end_idx = (i + 1) * num_steps_k1
