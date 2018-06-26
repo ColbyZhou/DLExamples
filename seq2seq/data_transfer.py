@@ -5,7 +5,6 @@ Created on Sat Jun 23 17:40:24 2018
 @author: zhouqiang02
 """
 
-import tensorflow as tf
 import numpy as np
 
 def gen_data(raw_inputs, raw_labels, embed_dim, batch_size,
@@ -20,27 +19,19 @@ def gen_data(raw_inputs, raw_labels, embed_dim, batch_size,
         e = (i + 1) * batch_len
         batched_inputs[i] = raw_inputs[s:e]
         batched_labels[i] = raw_labels[s:e]
-    
-#    batched_inputs = tf.convert_to_tensor(batched_inputs, dtype = tf.float64)
-#    batched_labels = tf.convert_to_tensor(batched_labels, dtype = tf.float64)
-    
-    size = batch_len // num_steps_k1
+        
+    # ensure last data has length `num_steps_k2`
+    act_batch_len = batch_len - (num_steps_k2 - num_steps_k1)
+    size = act_batch_len // num_steps_k1
 
     for i in range(size):
-        end_idx = (i + 1) * num_steps_k1
-        start_idx = max(0, end_idx - num_steps_k2)
         
+        start_idx = i * num_steps_k1
+        end_idx = start_idx + num_steps_k2
+                
         # dim [batch_size, num_steps_k2]
         input_list = batched_inputs[:, start_idx : end_idx]
         label_list = batched_labels[:, start_idx : end_idx]
-        
-        # dim [batch_size, num_steps_k2, embed_dim]
-        input_list = tf.one_hot(input_list, embed_dim)
-        # array of num_steps_k2 elements, with dim [batch_size, embed_dim]
-        input_list = tf.unstack(input_list, axis = 1)
-        
-        label_list = tf.one_hot(label_list, embed_dim)
-        label_list = tf.unstack(label_list, axis = 1)
-        
+
         yield (input_list, label_list)
 
