@@ -36,6 +36,7 @@ class MyRNNCell:
                 name = 'W',
                 shape = [self.state_size + self.embed_dim, self.state_size],
                 #initializer=tf.constant_initializer(0.1)
+                #intializer = tf.random_normal_initializer(mean = 0.1, stddev = 1.0)
                 )
         self.b = tf.get_variable(
                 name = 'b',
@@ -118,7 +119,7 @@ class RNN_Truncated_BPTT:
         # use high-level api BasicRNNCell
         self.output_list, self.final_state = tf.contrib.rnn.static_rnn(
                 cell=self.tf_rnn_cell, inputs=input_list, initial_state=self.init_state)
-
+        
     def build_output_layer(self, lable_list):
         """
         get loss of trainning exmples
@@ -155,29 +156,31 @@ class RNN_Truncated_BPTT:
         if self.num_steps_k2 < self.num_steps_k1:
             print("num_steps_k2 < num_steps_k1, exit")
             return
-
+        
+        # 1. placeholders
         self.input_list_placeholder = tf.placeholder(tf.int32, [self.batch_size, self.num_steps_k2])
         self.label_list_placeholder = tf.placeholder(tf.int32, [self.batch_size, self.num_steps_k2])
-        
         # dim [batch_size, num_steps_k2, embed_dim]
         input_list = tf.one_hot(self.input_list_placeholder, self.embed_dim)
         # array of num_steps_k2 tensors, with dim [batch_size, embed_dim]
         input_list = tf.unstack(input_list, axis = 1)
-        
         label_list = tf.one_hot(self.label_list_placeholder, self.embed_dim)
         label_list = tf.unstack(label_list, axis = 1)
 
+        # 2. build rnn cells
         self.build_with_my_rnn(input_list)
+        #self.build_with_tf_rnn(input_list)
         
         # output_list[k1 - 1] as last_state
         self.last_state = self.output_list[num_steps_k1 - 1]
         
-        # output layer
+        # 3. output layer
         self.total_loss, self.preds = self.build_output_layer(label_list)
         self.training_step = self.optimizer.minimize(self.total_loss)
         
-        # initialize
+        # 4. initialize variables
         self.sess.run(tf.global_variables_initializer())
+        self.saver = tf.train.Saver()
 
     def truncated_BPTT(self, raw_inputs, raw_labels, epoch_num):
         """
@@ -244,6 +247,10 @@ class RNN_Truncated_BPTT:
                     print(train_state)
                     print("train_loss at epoc" + str(num) + " data_idx: "
                           + str(data_idx) + ' : ' + str(train_loss))
+
+                if data_idx % 100 == 0:
+                    self.saver.save(self.sess, "./model/model.ckpt." + str(epoch_num) + "." + str(data_idx))
+        self.sess.close()
 
 def main():
     
