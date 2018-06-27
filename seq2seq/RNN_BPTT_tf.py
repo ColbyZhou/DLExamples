@@ -25,16 +25,16 @@ class MyRNNCell:
     """
         RNN by my own
     """
-    def __init__(self, state_size, embed_dim):
+    def __init__(self, state_size, input_size):
         """
         state_size: hidden layer size
-        embed_dim: input_size
+        input_size: input_size
         """
         self.state_size = state_size
-        self.embed_dim = embed_dim
+        self.input_size = input_size
         self.W = tf.get_variable(
                 name = 'W',
-                shape = [self.state_size + self.embed_dim, self.state_size],
+                shape = [self.state_size + self.input_size, self.state_size],
                 #initializer=tf.constant_initializer(0.1)
                 #intializer = tf.random_normal_initializer(mean = 0.1, stddev = 1.0)
                 )
@@ -45,7 +45,7 @@ class MyRNNCell:
             
     def one_time_step(self, input, state):
         """
-            input: [batch_size, embed_dim] tensor
+            input: [batch_size, input_size] tensor
             state: [batch_size, state_size] tensor
             output: [batch_size, state_size] tensor
             
@@ -54,12 +54,11 @@ class MyRNNCell:
         """
         
         output = tf.tanh(
-                tf.matmul(
-                        tf.concat([input, state], 1),
-                        self.W 
-                        )
-                + self.b
-                )
+                    tf.add(
+                        tf.matmul(
+                                tf.concat([input, state], 1),
+                                self.W),
+                        self.b))
         return output
 
 class RNN_Truncated_BPTT:
