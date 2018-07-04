@@ -187,7 +187,7 @@ class RNN_Truncated_BPTT:
             print("epoc: " + str(num))
             for data_idx, (input_list, label_list) in enumerate(all_data):
                 # get current input_list & label_list
-                # input_list: `self.num_steps_k2` tensors 
+                # input_list: `self.num_steps_k2` arrays 
                 # with shape: [batch_size, embed_dim]
                 # (input_list size is `self.num_steps_k1` for first step)
                 

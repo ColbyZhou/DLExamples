@@ -7,7 +7,8 @@ Created on Mon Jul  2 19:48:39 2018
 
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyloy as plt
+import matplotlib.pyplot as plt
+from MLP import MultiLayerPerceptron
 
 # 真实数据分布 Gaussian
 mu = 0
@@ -15,37 +16,33 @@ sigma = 0.1
 
 p_data = np.random.normal()
 
-batch_size = 10
 dim = 2
 
-# define G
-
-W = tf.get_variable('W', shape = [dim], initializer = tf.constant_initializer(0.01))
-b = tf.get_variable('b', shape = [], initializer, tf.constant_initializer(0.01))
-
-X = tf.placeholder(dtype = tf.float32, shape = [batch_size, dim], name = "X")
-
-y = W * X + b
-loss = tf.reduce_mean(tf.square(y - x))
-train_op = tf.train.GradientDescentOptimizer(0.01).minimize(loss)
-
-
+batch_size = 100
+input_size = dim
+output_size = input_size
+Generator = MultiLayerPerceptron(batch_size, [input_size, 128, 128, output_size],
+                                                 [tf.tanh, tf.tanh, tf.tanh], 0.1)
+Discriminator = MultiLayerPerceptron(batch_size, [input_size, 128, 128, 1],
+                                                 [tf.tanh, tf.tanh, tf.sigmoid], 0.1)
 
 with tf.Session() as sess:
     init = tf.global_variables_initializer()
     
     epoc_num = 1
     k_steps = 5
-    m = 10
+    m = batch_size
     # train proces
     for i in range(epoc_num):
         # k steps for optimize D
         for k in range(k_steps):
             
             # sample m noise samples {z_1, z_2, ..., z_m} from p_z(z)
-            z = np.random.uniform(-10, 10)
+            z = np.random.uniform(-10, 10, size = (m, dim))
             
             # sample m examples {x_1, x_2, ..., x_m} from p_data(x)
+            
+            g_output = Generator.forward(input = z)
             
             # update D
             #sess.run([train_op], feed_dict = {})
