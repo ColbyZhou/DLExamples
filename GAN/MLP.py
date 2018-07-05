@@ -6,9 +6,13 @@ Created on Wed Jul  4 11:52:38 2018
 """
 import numpy as np
 import tensorflow as tf
+import util
+import weakref
+
+MultiLayerPerceptron_PER_GRAPH_NAME_UID_DICT = weakref.WeakKeyDictionary()
 
 class MultiLayerPerceptron:
-    
+        
     def __init__(self, batch_size, dim_list, activation_list, learning_rate = 0.1):
         """
             define a MLP
@@ -18,6 +22,9 @@ class MultiLayerPerceptron:
         assert len(dim_list) > 1
         assert len(activation_list) == len(dim_list) - 1
         
+        self.scope_name = util.get_uniq_object_name(self.__class__.__name__,
+                            MultiLayerPerceptron_PER_GRAPH_NAME_UID_DICT)
+        
         self.batch_size = batch_size
         self.dim_list = dim_list
         self.activation_list = activation_list
@@ -25,29 +32,32 @@ class MultiLayerPerceptron:
         
         self.input_size = self.dim_list[0]
         self.output_size = self.dim_list[-1]
-        self.input_layer = tf.placeholder(tf.float32,
-                                shape = [self.batch_size, self.input_size],
-                                name = "input_layer")
-        self.label_placeholder = tf.placeholder(tf.float32,
-                                shape = [self.batch_size, self.output_size],
-                                name = "label_placeholder")
+        with tf.variable_scope(self.scope_name):
+            self.input_layer = tf.placeholder(tf.float32,
+                                    shape = [self.batch_size, self.input_size],
+                                    name = "input_layer")
+            self.label_placeholder = tf.placeholder(tf.float32,
+                                    shape = [self.batch_size, self.output_size],
+                                    name = "label_placeholder")
         # build network
         last_layer = self.input_layer
         last_dim = self.input_size
         self.W_list = []
         self.b_list =[]
-        for idx in range(1, len(self.dim_list)):
-            cur_dim = self.dim_list[idx]
-            self.cur_weight = tf.get_variable("weigth" + str(idx), [last_dim, cur_dim])
-            print(self.cur_weight.name)
-            
-            self.cur_bias = tf.get_variable("bias" + str(idx), [cur_dim])
-            cur_act = self.activation_list[idx - 1]
-            last_layer = tf.add(cur_act(tf.matmul(last_layer, self.cur_weight)), self.cur_bias)
-            last_dim = cur_dim
-            self.W_list.append(self.cur_weight)
-            self.b_list.append(self.cur_bias)
-            #print(cur_weight.shape)
+        with tf.variable_scope(self.scope_name):
+            for idx in range(1, len(self.dim_list)):
+                cur_dim = self.dim_list[idx]
+                self.cur_weight = tf.get_variable("weigth" + str(idx), [last_dim, cur_dim])                
+                self.cur_bias = tf.get_variable("bias" + str(idx), [cur_dim])
+                cur_act = self.activation_list[idx - 1]
+                last_layer = tf.add(cur_act(tf.matmul(last_layer, self.cur_weight)), self.cur_bias)
+                last_dim = cur_dim
+                self.W_list.append(self.cur_weight)
+                self.b_list.append(self.cur_bias)
+                print(self.cur_weight.shape)
+                print(self.cur_weight.name)
+                print(self.cur_bias.shape)
+                print(self.cur_bias.name)
         self.output_layer = last_layer
         
         # train

@@ -9,6 +9,10 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from MLP import MultiLayerPerceptron
+from test import Test
+import re
+import weakref
+import collections
 
 """
 mu = [1, 1]
@@ -25,15 +29,18 @@ print(z.shape)
 print(z)
 """
 
+#"""
 dim = 2
 batch_size = 100
 input_size = dim
 output_size = input_size
+
 Generator = MultiLayerPerceptron(batch_size, [input_size, 128, 128, output_size],
                                                  [tf.tanh, tf.tanh, tf.tanh], 0.1)
 
 Discriminator = MultiLayerPerceptron(batch_size, [input_size, 128, 128, 1], [tf.tanh, tf.tanh, tf.sigmoid], 0.1)
 
+"""
 Generator.initialize()
 #Discriminator.initialize()
 
@@ -43,3 +50,15 @@ g_output = Generator.forward(input = z)
 
 #print(z)
 #print(g_output)
+#"""
+
+tf_rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units = 10)
+tf_rnn_cell2 = tf.contrib.rnn.BasicRNNCell(num_units = 10)
+
+print(tf_rnn_cell.name)
+print(tf_rnn_cell2.name)
+
+t1 = Test()
+t2 = Test()
+
+
