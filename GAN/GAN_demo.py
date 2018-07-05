@@ -24,13 +24,13 @@ def sample_noise(num, dim):
     return z
 
 # plot true data & noise sample
-#"""
+"""
 x, y = sample_true_data(num = 2000).T
 fig, axes = plt.subplots(nrows = 1, ncols = 2, figsize = (15,3))
 axes[0].plot(x, y, '.')
 axes[1].plot(*(sample_noise(100, dim)).T, '*')
 plt.show()
-#"""
+"""
 
 # hyperparameters
 G_learning_rate = 0.1
@@ -54,12 +54,16 @@ Discriminator.creat_label_placeholder()
 # G loss
 ones_label = tf.ones((G_output.shape[0], 1))
 # Generator's output label are all ones, in order to fake Discriminator
-G_loss = Discriminator.get_softmax_cross_entropy_loss(extra_data_label = ones_label)
+#G_loss = Discriminator.get_softmax_cross_entropy_loss(extra_data_label = ones_label)
+G_loss = Discriminator.get_binary_cross_entropy_loss(extra_data_label = ones_label)
+#print(G_loss)
 
 # D loss
 zeros_label = tf.zeros((G_output.shape[0], 1))
 # Generator's output label are all zero, in order to recognize Generator's fake data
-D_loss = Discriminator.get_softmax_cross_entropy_loss(extra_data_label = zeros_label)
+#D_loss = Discriminator.get_softmax_cross_entropy_loss(extra_data_label = zeros_label)
+D_loss = Discriminator.get_binary_cross_entropy_loss(extra_data_label = zeros_label)
+#print(D_loss)
 
 # G trainer
 G_trainer = tf.train.AdamOptimizer(G_learning_rate)
@@ -73,7 +77,7 @@ D_loss_list = []
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())  
-    epoc_num = 3
+    epoc_num = 3000
     d_steps = 2
     g_steps = 1
     m = batch_size
@@ -86,14 +90,31 @@ with tf.Session() as sess:
             # sample m examples {x_1, x_2, ..., x_m} from p_data(x) (true_data)
             true_samples = sample_true_data(num = m)
             all_ones = np.ones((m,1))
+
+            """
+            d_loss, d_probs, labels = sess.run([D_loss, Discriminator.get_output_layer_tensor(), Discriminator.get_labels_tensor()],
+                    feed_dict = {
+                    Generator.get_input_layer_tensor() : z, # p_z
+                    Discriminator.get_input_layer_tensor() : true_samples, # true data
+                    Discriminator.get_label_placeholder() : all_ones, # all ones
+                    })
+            print(d_probs)
+            print(labels)
+            print(d_loss)
+            tmp_loss = -1 * np.mean(labels * np.log(d_probs) + (1 - labels) * np.log(1 - d_probs))
+            print(tmp_loss)
+            print("=====================")
+            """
             # update D
-            d_loss, _ = sess.run([D_loss, D_step],
+            d_loss, _, d_probs = sess.run([D_loss, D_step, Discriminator.get_output_layer_tensor()],
                     feed_dict = {
                     Generator.get_input_layer_tensor() : z, # p_z
                     Discriminator.get_input_layer_tensor() : true_samples, # true data
                     Discriminator.get_label_placeholder() : all_ones, # all ones
                     })
             G_loss_list.append(d_loss)
+            #print(d_probs)
+            #print("******************")
 
         # 2. g steps for optimize G
         for g in range(g_steps): 
@@ -110,10 +131,13 @@ with tf.Session() as sess:
                     })
             D_loss_list.append(g_loss)
 
-            if i * g_steps + g % 5 == 0:
+            #if (i * g_steps + g) % 5 == 0:
+            if i == epoc_num - 1 and g == g_steps - 1:
                 plt.plot(*g_data.T, '.', label = "Generator Data")
                 plt.show()
 
+print(D_loss_list)
+print(G_loss_list)
 
 plt.plot(range(len(D_loss_list)), D_loss_list, label = 'Discriminator Loss')
 plt.legend()

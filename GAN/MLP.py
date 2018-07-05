@@ -62,7 +62,7 @@ class MultiLayerPerceptron:
                 self.cur_weight = tf.get_variable("weigth" + str(idx), [last_dim, cur_dim])                
                 self.cur_bias = tf.get_variable("bias" + str(idx), [cur_dim])
                 cur_act = self.activation_list[idx - 1]
-                last_layer = tf.add(cur_act(tf.matmul(last_layer, self.cur_weight)), self.cur_bias)
+                last_layer = cur_act(tf.add(tf.matmul(last_layer, self.cur_weight), self.cur_bias))
                 last_dim = cur_dim
                 self.W_list.append(self.cur_weight)
                 self.b_list.append(self.cur_bias)
@@ -92,8 +92,12 @@ class MultiLayerPerceptron:
 
     def get_output_layer_tensor(self):
         return self.output_layer
+
     def get_label_placeholder(self):
         return self.label_placeholder
+
+    def get_labels_tensor(self):
+        return self.labels
 
     def creat_label_placeholder(self):
         with tf.variable_scope(self.scope_name):
@@ -102,7 +106,7 @@ class MultiLayerPerceptron:
                             name = "label_placeholder")
 
     def get_all_labels(self, extra_data_label):
-        labels = self.label_placeholder
+        self.labels = self.label_placeholder
         # concat extra data label for extra input
         if self.has_extra_tensor_input:
             assert extra_data_label != None
@@ -110,21 +114,27 @@ class MultiLayerPerceptron:
             assert self.extra_input_size == extra_data_label.shape[0]
             assert self.output_size == extra_data_label.shape[1]
             # labels dim: [self.batch_size + self.extra_input_size, self.output_size]
-            labels = tf.concat([self.label_placeholder, extra_data_label], 0)
-        return labels
+            self.labels = tf.concat([self.label_placeholder, extra_data_label], 0)
+        return self.labels
 
     def get_square_loss(self, extra_data_label = None):
         # get loss
-        labels = self.get_all_labels(extra_data_label)
-        self.loss = tf.square(labels - self.output_layer)
+        self.labels = self.get_all_labels(extra_data_label)
+        self.loss = tf.square(self.labels - self.output_layer)
+        self.total_loss = tf.reduce_mean(self.loss)
+        return self.total_loss
+    
+    def get_binary_cross_entropy_loss(self, extra_data_label = None):
+        self.labels = self.get_all_labels(extra_data_label)
+        self.loss = -1 * (self.labels * tf.log(self.output_layer) + (1 - self.labels) * tf.log(1 - self.output_layer))
         self.total_loss = tf.reduce_mean(self.loss)
         return self.total_loss
     
     def get_softmax_cross_entropy_loss(self, extra_data_label = None):
 
-        labels = self.get_all_labels(extra_data_label)
+        self.labels = self.get_all_labels(extra_data_label)
         self.loss = tf.nn.softmax_cross_entropy_with_logits(
-                logits = self.output_layer, labels = labels)
+                logits = self.output_layer, labels = self.labels)
         self.total_loss = tf.reduce_mean(self.loss)
         return self.total_loss
 
