@@ -77,8 +77,8 @@ D_loss_list = []
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())  
-    epoc_num = 3000
-    d_steps = 2
+    epoc_num = 1
+    d_steps = 1
     g_steps = 1
     m = batch_size
     # train proces
@@ -123,6 +123,18 @@ with tf.Session() as sess:
             zero_data_for_G = np.zeros((m, dim))
             #true_samples = sample_true_data(num = m)
             all_zeros = np.zeros((m, 1))
+
+            """
+            D_params = sess.run([Generator.get_var_list()],
+                    feed_dict = {
+                    Generator.get_input_layer_tensor() : z, # p_z
+                    Discriminator.get_input_layer_tensor() : true_samples, # true data
+                    Discriminator.get_label_placeholder() : all_ones, # all ones
+                    })
+            print("before update")
+            print(D_params)
+            """
+
             g_loss, _, g_data = sess.run([G_loss, G_step, G_output],
                     feed_dict = {
                     Generator.get_input_layer_tensor() : z, # p_z
@@ -131,6 +143,17 @@ with tf.Session() as sess:
                     })
             D_loss_list.append(g_loss)
 
+            """
+            D_params = sess.run([Generator.get_var_list()],
+                    feed_dict = {
+                    Generator.get_input_layer_tensor() : z, # p_z
+                    Discriminator.get_input_layer_tensor() : true_samples, # true data
+                    Discriminator.get_label_placeholder() : all_ones, # all ones
+                    })
+            print("after update")
+            print(D_params)
+            """
+            
             #if (i * g_steps + g) % 5 == 0:
             if i == epoc_num - 1 and g == g_steps - 1:
                 plt.plot(*g_data.T, '.', label = "Generator Data")
