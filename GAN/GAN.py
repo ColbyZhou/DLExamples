@@ -26,7 +26,8 @@ def sample_true_data_1(num):
     x = (np.random.rand(num) - 0.5) * 2
     # y ~ +-sqrt(1 - x**2)
     y = np.random.choice([-1, 1], num) * (np.sqrt(1 - x ** 2))
-    data = np.array([(a, b) for a, b in zip(x, y)])
+    #data = np.array([(a, b) for a, b in zip(x, y)])
+    data = np.hstack((x[:, np.newaxis], y[:, np.newaxis]))
     return data
 
 def sample_noise(num, dim):
@@ -85,8 +86,8 @@ D_loss_list = []
 with tf.Session() as sess:
     graph_writer = tf.summary.FileWriter("logs/", sess.graph)
 
-    sess.run(tf.global_variables_initializer())  
-    epoc_num = 2000
+    sess.run(tf.global_variables_initializer())
+    epoc_num = 10000
     d_steps = 1
     g_steps = 1
     m = batch_size
@@ -106,9 +107,6 @@ with tf.Session() as sess:
                     Discriminator.get_input_layer_tensor() : true_samples, # true data
                     })
             G_loss_list.append(d_loss)
-            #print(d_probs)
-            #print("===========")
-            #print(g_probs)
 
         # 2. g steps for optimize G
         for g in range(g_steps): 
@@ -131,6 +129,8 @@ with tf.Session() as sess:
                 plt.plot(*g_data.T, '.', label = "Generator Data")
                 plt.show()
             """
+        if i % 100 == 0:
+            print(i)
     z = sample_noise(m, dim)
     final_g_data = sess.run([generator_output],
             feed_dict = {
@@ -147,6 +147,7 @@ with tf.Session() as sess:
 
 plt.plot(range(len(D_loss_list)), D_loss_list, label = 'Discriminator Loss')
 plt.legend()
+plt.show()
 plt.plot(range(len(G_loss_list)), G_loss_list, label = "Generator Loss")
 plt.legend()
 plt.show()
