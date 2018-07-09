@@ -52,9 +52,12 @@ class Generator:
         with tf.variable_scope(self.scope_name):
             for idx in range(1, len(self.dim_list)):
                 cur_dim = self.dim_list[idx]
-                self.cur_weight = tf.get_variable("weigth" + str(idx), [last_dim, cur_dim])                
-                self.cur_bias = tf.get_variable("bias" + str(idx), [cur_dim])
+                self.cur_weight = tf.get_variable("weigth" + str(idx), [last_dim, cur_dim],
+                    initializer = tf.truncated_normal_initializer(stddev=0.02))           
+                self.cur_bias = tf.get_variable("bias" + str(idx), [cur_dim],
+                    initializer=tf.constant_initializer(0.0))
                 cur_act = self.activation_list[idx - 1]
+                print(cur_act)
                 last_layer = cur_act(tf.add(tf.matmul(last_layer, self.cur_weight), self.cur_bias))
                 last_dim = cur_dim
                 self.W_list.append(self.cur_weight)
@@ -63,5 +66,18 @@ class Generator:
         self.output_layer = last_layer
         
         return self.output_layer
+
+    def get_scope_name(self):
+        return self.scope_name
+
+    def get_var_list(self):
+        return self.W_list + self.b_list
+
+    def get_var_list_by_collection(self):
+        return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope = self.scope_name)
+
+    def get_input_layer_tensor(self):
+        return self.input_layer
+
 
         

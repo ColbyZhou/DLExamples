@@ -13,7 +13,7 @@ from test import Test
 
 sess = tf.Session()
 
-#"""
+"""
 mu = [1, 1]
 #sigma = [[1, 0.5], [1.5, 1.5]]
 sigma = [[1, 0], [0, 1]]
@@ -116,3 +116,24 @@ print(c.shape)
 
 print(sess.run(c))
 """
+
+def sample_true_data(num):
+    mu = [1, 1]
+    sigma = [[1, 0.5], [1.5, 3.5]]
+    true_data = np.random.multivariate_normal(mean = mu, cov = sigma, size = num)
+    return true_data
+
+# circle
+def sample_true_data_1(num):
+    # x ~ [-1, 1]
+    x = (np.random.rand(num) - 0.5) * 2
+    # y ~ +-sqrt(1 - x**2)
+    y = np.random.choice([-1, 1], num) * (np.sqrt(1 - x ** 2))
+    data = np.array([(a, b) for a, b in zip(x, y)])
+    return data
+
+true_data = sample_true_data(1000)
+data = sample_true_data_1(1000)
+print(true_data.shape)
+print(data)
+print(data.shape)
