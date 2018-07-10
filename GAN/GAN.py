@@ -232,9 +232,9 @@ def GAN(data_name = "circle"):
                         Generator.get_input_layer_tensor() : z, # p_z
                         })
                 if data_name == "mnist":
-                    save_gen_img_data(img_dir, gen_data, i, img_height, img_width)
+                    save_gen_img_data(img_dir, gen_data, i + 1, img_height, img_width)
                 else:
-                    plot_gen_data(img_dir, gen_data, i)
+                    plot_gen_data(img_dir, gen_data, i + 1)
 
     plot_loss_fig(img_dir, D_loss_list, G_loss_list)
 
