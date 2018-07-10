@@ -54,11 +54,12 @@ class Discriminator:
             for idx in range(1, len(self.dim_list)):
                 cur_dim = self.dim_list[idx]
                 self.cur_weight = tf.get_variable("weigth" + str(idx), [last_dim, cur_dim],
-                    initializer = tf.truncated_normal_initializer(stddev=0.02))
+                    #initializer = tf.truncated_normal_initializer(stddev=0.02)
+                    )
                 self.cur_bias = tf.get_variable("bias" + str(idx), [cur_dim],
-                    initializer=tf.constant_initializer(0.0))
+                    #initializer=tf.constant_initializer(0.0)
+                    )
                 cur_act = self.activation_list[idx - 1]
-                print(cur_act)
                 last_layer = cur_act(tf.add(tf.matmul(last_layer, self.cur_weight), self.cur_bias))
                 last_dim = cur_dim
                 self.W_list.append(self.cur_weight)
@@ -67,9 +68,6 @@ class Discriminator:
         self.output_layer = last_layer
         self.d_output = tf.slice(self.output_layer, [0, 0], [self.batch_size, -1], name = None)
         self.g_output = tf.slice(self.output_layer, [self.batch_size, 0], [-1, -1], name = None)
-        #print(self.output_layer.shape)
-        #print(self.d_output.shape)
-        #print(self.g_output.shape)
         return self.d_output, self.g_output
         
     def get_scope_name(self):

@@ -53,12 +53,17 @@ class Generator:
             for idx in range(1, len(self.dim_list)):
                 cur_dim = self.dim_list[idx]
                 self.cur_weight = tf.get_variable("weigth" + str(idx), [last_dim, cur_dim],
-                    initializer = tf.truncated_normal_initializer(stddev=0.02))           
+                    #initializer = tf.truncated_normal_initializer(stddev=0.02)
+                    )
                 self.cur_bias = tf.get_variable("bias" + str(idx), [cur_dim],
-                    initializer=tf.constant_initializer(0.0))
+                    #initializer=tf.constant_initializer(0.0)
+                    )
+                tmp_layer = tf.add(tf.matmul(last_layer, self.cur_weight), self.cur_bias)
                 cur_act = self.activation_list[idx - 1]
-                print(cur_act)
-                last_layer = cur_act(tf.add(tf.matmul(last_layer, self.cur_weight), self.cur_bias))
+                if cur_act != None:
+                    last_layer = cur_act(tmp_layer)
+                else:
+                    last_layer = tmp_layer
                 last_dim = cur_dim
                 self.W_list.append(self.cur_weight)
                 self.b_list.append(self.cur_bias)
