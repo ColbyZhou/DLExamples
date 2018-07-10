@@ -221,7 +221,7 @@ def GAN(data_name = "circle"):
                 D_loss_list.append(g_loss)
 
             if i % 100 == 0:
-                print(str(i) + " of " + str(epoc_num) + ", " + "{:.2f}".format(1.0 * i / epoc_num) + "%")
+                print(str(i) + " of " + str(epoc_num) + ", " + "{:.2f}".format(100.0 * i / epoc_num) + "%")
 
             if (i + 1) % 1000 == 0 or i == 0:
                 z = sample_noise(m, dim)
