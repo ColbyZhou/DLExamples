@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jul  6 19:31:19 2018
+Created on Thu Jul 12 15:30:13 2018
 
 @author: zhouqiang02
 """
@@ -9,11 +9,12 @@ import tensorflow as tf
 import util
 import weakref
 
-Discriminator_PER_GRAPH_NAME_UID_DICT = weakref.WeakKeyDictionary()
+ConDiscriminator_PER_GRAPH_NAME_UID_DICT = weakref.WeakKeyDictionary()
 
-class Discriminator:
+class ConDiscriminator:
     
-    def __init__(self, batch_size, dim_list, activation_list, scope_name = None):
+    def __init__(self, batch_size, dim_list, activation_list, label_num,
+                 label_embed_dim, scope_name = None):
         """
             define a Discriminator
             dim_list: dim list including input_size
@@ -24,14 +25,16 @@ class Discriminator:
         # get a uniq name for each object
         if scope_name is None:
             self.scope_name = util.get_uniq_object_name(self.__class__.__name__,
-                                Discriminator_PER_GRAPH_NAME_UID_DICT)
+                                ConDiscriminator_PER_GRAPH_NAME_UID_DICT)
         else:
             self.scope_name = scope_name
 
         self.batch_size = batch_size
         self.dim_list = dim_list
         self.activation_list = activation_list
-        
+        self.label_num = label_num
+        self.label_embed_dim = label_embed_dim
+
         self.input_size = self.dim_list[0]
         self.output_size = self.dim_list[-1]
     
@@ -44,10 +47,26 @@ class Discriminator:
             self.d_input_layer = tf.placeholder(tf.float32,
                 shape = [self.batch_size, self.input_size],
                 name = "d_input_layer")
-
+            self.input_label = tf.placeholder(tf.int32, 
+                shape = [self.batch_size],
+                name = "input_label")
+            self.generator_output_label = tf.placeholder(tf.int32, 
+                shape = [generator_output.shape[0]],
+                name = "generator_output_label")
+            # [batch_size + generator_output.shape[0]]
+            self.all_label = tf.concat([self.input_label, self.generator_output_label], 0)
+            
+            self.label_embedings = tf.get_variable("label_embedings",
+                                    [self.label_num, self.label_embed_dim])
+            
+            # [batch_size + generator_output.shape[0], label_embed_dim]
+            self.input_label_embed = tf.nn.embedding_lookup(
+                    self.label_embedings, self.all_label)
+        # [batch_size + generator_output.shape[0], input_size]
         all_input_layer =  tf.concat([self.d_input_layer, generator_output], 0)
-        last_layer = all_input_layer
-        last_dim = self.input_size
+        # [batch_size + generator_output.shape[0], input_size + label_embed_dim]
+        last_layer = tf.concat([all_input_layer, self.input_label_embed], 1)
+        last_dim = self.input_size + self.label_embed_dim
         self.W_list = []
         self.b_list =[]
         with tf.variable_scope(self.scope_name):
@@ -81,3 +100,10 @@ class Discriminator:
 
     def get_input_layer_tensor(self):
         return self.d_input_layer
+
+    def get_input_label_tensor(self):
+        return self.input_label
+    
+    def get_generator_output_label_tensor(self):
+        return self.generator_output_label
+    

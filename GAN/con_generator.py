@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jul  6 19:31:05 2018
+Created on Thu Jul 12 15:32:07 2018
 
 @author: zhouqiang02
 """
@@ -9,11 +9,12 @@ import tensorflow as tf
 import util
 import weakref
 
-Generator_PER_GRAPH_NAME_UID_DICT = weakref.WeakKeyDictionary()
+ConGenerator_PER_GRAPH_NAME_UID_DICT = weakref.WeakKeyDictionary()
 
-class Generator:
+class ConGenerator:
     
-    def __init__(self, batch_size, dim_list, activation_list, scope_name = None):
+    def __init__(self, batch_size, dim_list, activation_list, label_num,
+                 label_embed_dim, scope_name = None):
         """
             define a Generator
             dim_list: dim list including input_size
@@ -24,13 +25,15 @@ class Generator:
         # get a uniq name for each object
         if scope_name is None:
             self.scope_name = util.get_uniq_object_name(self.__class__.__name__,
-                                Generator_PER_GRAPH_NAME_UID_DICT)
+                                ConGenerator_PER_GRAPH_NAME_UID_DICT)
         else:
             self.scope_name = scope_name
         
         self.batch_size = batch_size
         self.dim_list = dim_list
         self.activation_list = activation_list
+        self.label_num = label_num
+        self.label_embed_dim = label_embed_dim
         
         self.input_size = self.dim_list[0]
         self.output_size = self.dim_list[-1]
@@ -44,9 +47,18 @@ class Generator:
             self.input_layer = tf.placeholder(tf.float32,
                 shape = [self.batch_size, self.input_size],
                 name = "input_layer")
+            self.input_label = tf.placeholder(tf.int32, 
+                shape = [self.batch_size],
+                name = "input_label")
+            self.label_embedings = tf.get_variable("label_embedings",
+                                    [self.label_num, self.label_embed_dim])
+            # [batch_size, label_embed_dim]
+            self.input_label_embed = tf.nn.embedding_lookup(
+                    self.label_embedings, self.input_label)
 
-        last_layer = self.input_layer
-        last_dim = self.input_size
+        # [batch_size, input_size + label_embed_dim]
+        last_layer = tf.concat([self.input_layer, self.input_label_embed], 1)
+        last_dim = self.input_size + self.label_embed_dim
         self.W_list = []
         self.b_list =[]
         with tf.variable_scope(self.scope_name):
@@ -83,3 +95,7 @@ class Generator:
 
     def get_input_layer_tensor(self):
         return self.input_layer
+    
+    def get_input_label_tensor(self):
+        return self.input_label
+    

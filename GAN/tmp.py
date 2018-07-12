@@ -8,8 +8,10 @@ Created on Wed Jul  4 17:45:22 2018
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from MLP import MultiLayerPerceptron
-from test import Test
+from tensorflow.examples.tutorials.mnist import input_data
+
+#from MLP import MultiLayerPerceptron
+#from test import Test
 
 sess = tf.Session()
 
@@ -116,7 +118,7 @@ print(c.shape)
 
 print(sess.run(c))
 """
-
+"""
 def sample_true_data(num):
     mu = [1, 1]
     sigma = [[1, 0.5], [1.5, 3.5]]
@@ -137,3 +139,47 @@ data = sample_true_data_1(1000)
 print(true_data.shape)
 print(data)
 print(data.shape)
+"""
+
+"""
+mnist = input_data.read_data_sets('MNIST_data', one_hot=False)
+x_value, label = mnist.train.next_batch(10)
+print(label)
+print(label.shape)
+"""
+
+mnist = input_data.read_data_sets('MNIST_data', one_hot=False)
+def sample_true_data_mnist(num, label_arr):
+    if mnist != None:
+        x_value, x_label = mnist.train.next_batch(num)
+        x_label = x_label.astype(np.int32)
+        #x_label = np.dot(label, label_arr)[:,0].astype(np.int32)
+        return x_value, x_label
+
+batch_size = 4
+label_arr = np.arange(10)[:, np.newaxis]
+x_value, x_label = sample_true_data_mnist(batch_size, label_arr)
+print(x_label.shape)
+print(x_label)
+
+embedings = tf.get_variable("label_embedings",[10, 20])
+
+input_label = tf.placeholder(tf.int32, 
+                shape = [batch_size],
+                name = "input_label")
+
+#label_embeds = tf.nn.embedding_lookup(embedings, x_label)
+label_embeds = tf.nn.embedding_lookup(embedings, input_label)
+print(label_embeds)
+
+"""
+sess.run(tf.global_variables_initializer())
+print(sess.run(embedings))
+print(sess.run(label_embeds,
+               feed_dict = {input_label:x_label}
+               ))
+print(embedings.shape)
+print(x_label.shape)
+print(label_embeds.shape)
+"""
+
