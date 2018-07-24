@@ -10,6 +10,8 @@ import tensorflow as tf
 import raw_data_provider
 import data_transfer
 import RNN_cell_tf
+import LSTM_cell_tf
+import GRU_cell_tf
 
 num_steps_k1 = 5
 num_steps_k2 = 10
