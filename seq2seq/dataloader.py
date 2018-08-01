@@ -28,18 +28,21 @@ class DataLoader(object):
     def read_data(self):
         """
             read data
-            line format: input \t output
+            line format: data_id \t input \t output
             with, input(output) is a sequence of word id, seperated by space
         """
         self.input_data = []
         self.output_data = []
+        self.id_data = []
         with open(self.file_path, 'r') as file:
             for idx, line in enumerate(file):
                 fields = line.strip().split('\t')
-                input_seq = [int(x) for x in fields[0].split(' ')]
-                output_seq = [int(x) for x in fields[1].split(' ')]
+                data_id = fields[0]
+                input_seq = [int(x) for x in fields[1].split(' ')]
+                output_seq = [int(x) for x in fields[2].split(' ')]
                 self.input_data.append(input_seq)
                 self.output_data.append(output_seq)
+                self.id_data.append(data_id)
 
         self._num_examples = len(self.input_data)
         self._begin = 0
@@ -52,18 +55,21 @@ class DataLoader(object):
         start = self._begin
         batch_input = []
         batch_output = []
+        batch_id = []
         if start + batch_size > self._num_examples:
             self._epochs += 1
             rest_num = self._num_examples - start
             self._begin = batch_size - rest_num
             batch_input = self.input_data[start:] + self.input_data[0:self._begin]
             batch_output = self.output_data[start:] + self.output_data[0:self._begin]
+            batch_id = self.id_data[start:] + self.id_data[0:self._begin]
         else:
             end = start + batch_size
             batch_input = self.input_data[start:end]
             batch_output = self.output_data[start:end]
+            batch_id = self.id_data[start:end]
             self._begin = end
-        return (batch_input, batch_output)
+        return (batch_id, batch_input, batch_output)
 
     def padding_batch(self, batch, seq_len):
         """
@@ -95,13 +101,16 @@ class DataLoader(object):
 
 def test():
 
-    data_loader = DataLoader("temp.txt")
+    data_loader = DataLoader("test_data_wise_20180723_sample")
     data_loader.read_data()
 
     batch_size = 6
     for i in range(5):
         batch = data_loader.next_batch(batch_size)
-        print(batch)
+        batch_id, batch_input, batch_output = batch
+        print(batch_id)
+        print(batch_input)
+        print(batch_output)
         print("==============")
 
 if __name__ == '__main__':

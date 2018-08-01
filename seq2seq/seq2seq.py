@@ -24,7 +24,7 @@ def train_seq2seq(train_path, voc_path):
     for i in range(epoc_num):
         for j in range(batch_num):
             batch = data_loader.next_batch()
-            batch_input, batch_output = batch
+            batch_id, batch_input, batch_output = batch
             pad_batch_input, pad_batch_input_lengths = data_loader.padding_batch(batch_input, seq_len)
             pad_batch_output, pad_batch_output_lengths = data_loader.padding_batch(batch_output, seq_len)
 
