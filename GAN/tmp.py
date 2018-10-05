@@ -13,6 +13,8 @@ from tensorflow.examples.tutorials.mnist import input_data
 #from MLP import MultiLayerPerceptron
 #from test import Test
 
+tf.train.replica_device_setter()
+
 sess = tf.Session()
 
 """

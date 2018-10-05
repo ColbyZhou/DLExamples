@@ -15,18 +15,17 @@ import urllib2
 
 import tensorflow as tf
 
-if len(sys.argv) < 3:
-    print "argv err"
+if len(sys.argv) < 2:
+    print "usage: python " + sys.argv[0] + " task_index"
     sys.exit(1)
 
-job_name = sys.argv[1]
-task_index = int(sys.argv[2])
+task_index = int(sys.argv[1])
 
 ps_hosts = ['10.58.53.16:2221']
 worker_hosts = ['10.58.53.16:2222', '10.58.53.16:2223']
 
-cluster_spec = tf.train.ClusterSpec({"worker": worker_hosts, "ps": ps_hosts})
+cluster = tf.train.ClusterSpec({"worker": worker_hosts, "ps": ps_hosts})
 
-server = tf.train.Server(cluster_spec, job_name = job_name, task_index = task_index)
+server = tf.train.Server(cluster, job_name = "ps", task_index = task_index)
 
 server.join()

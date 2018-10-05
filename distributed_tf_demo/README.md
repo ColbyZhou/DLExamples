@@ -8,7 +8,7 @@
 
 - 1.2 Between-Graph是ParameterServer join等待接受来自Worker的参数更新。此时，每一个worker是一个独立的计算节点，有各自的Graph，根据自己的数据计算完梯度之后，将其发送给ParameterServer。
 优点是不用分发数据，worker有自己的数据和Graph，训练速度快。
-缺点是配置复杂。
+缺点是配置复杂，worker需要自己创建Graph。同时，如果一个节点失败了，影响整体的训练
 
 
 ## 2. 参数更新方式：
