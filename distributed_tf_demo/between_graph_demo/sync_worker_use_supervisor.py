@@ -51,6 +51,7 @@ total_run_num = 2000
 
 ps_hosts = ['10.58.53.16:2221']
 worker_hosts = ['10.58.53.16:2222', '10.58.53.16:2223']
+num_workers = len(worker_hosts)
 
 # 1. Create a cluster
 cluster = tf.train.ClusterSpec({"worker": worker_hosts, "ps": ps_hosts})
@@ -104,7 +105,29 @@ with tf.device(tf.train.replica_device_setter(
     global_step = tf.train.get_or_create_global_step()
 
     # 6. ******* (Method Specific) sync optimizer *******
-    train_op = tf.train.GradientDescentOptimizer(lr).minimize(loss, global_step = global_step)
+    replicas_to_aggregate = num_workers
+    optimizer = tf.train.GradientDescentOptimizer(lr)
+    sync_opt = tf.train.SyncReplicasOptimizer(
+            optimizer,
+            replicas_to_aggregate = replicas_to_aggregate,
+            total_num_replicas = num_workers,
+            variable_averages = None,
+            variables_to_average = None,
+            use_locking = True,
+            name = "sync_optimizer")
+
+    train_op = sync_opt.minimize(loss, global_step = global_step)
+
+    # ******* For Sync Optimizer *******
+    # init tokens & chief queue runners
+    init_token_op = sync_opt.get_init_tokens_op()
+    chief_queue_runner = sync_opt.get_chief_queue_runner()
+
+    # get local init op for Supervisor
+    local_init_op = sync_opt.local_step_init_op
+    if is_chief:
+        local_init_op = sync_opt.chief_init_op
+    ready_for_local_init_op = sync_opt.ready_for_local_init_op
 
     # 7. Create a Supervisor
     init_op = tf.global_variables_initializer()
@@ -112,8 +135,10 @@ with tf.device(tf.train.replica_device_setter(
 
     sv = tf.train.Supervisor(
             is_chief = is_chief,
-            logdir = './chk_point_asyn_sup/',
+            logdir = './chk_point_syn_sup/',
             init_op = init_op,
+            local_init_op=local_init_op,
+            ready_for_local_init_op=ready_for_local_init_op,
             summary_op=None,
             saver = saver,
             recovery_wait_secs = 1,
@@ -128,6 +153,12 @@ with tf.device(tf.train.replica_device_setter(
     # chief worker prepare session, while other workers wait the session to be created
     with sv.prepare_or_wait_for_session(server.target, config = sess_config) as sess:
         print "worker " + str(task_index) + " session completed"
+
+        # ******* For Sync Optimizer *******
+        if is_chief:
+            sess.run(init_token_op)
+            sv.start_queue_runners(sess, [chief_queue_runner])
+
         # 9. Iterate total_run_num times
         _W = 0
         _b = 0

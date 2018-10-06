@@ -16,30 +16,6 @@ import urllib2
 import numpy as np
 import tensorflow as tf
 
-"""
-def __init__(self,
-            graph=None,
-            ready_op=USE_DEFAULT,
-            ready_for_local_init_op=USE_DEFAULT,
-            is_chief=True,
-            init_op=USE_DEFAULT,
-            init_feed_dict=None,
-            local_init_op=USE_DEFAULT,
-            logdir=None,
-            summary_op=USE_DEFAULT,
-            saver=USE_DEFAULT,
-            global_step=USE_DEFAULT,
-            save_summaries_secs=120,
-            save_model_secs=600,
-            recovery_wait_secs=30,
-            stop_grace_secs=120,
-            checkpoint_basename="model.ckpt",
-            session_manager=None,
-            summary_writer=USE_DEFAULT,
-            init_fn=None,
-            local_init_run_options=None):
-"""
-
 if len(sys.argv) < 2:
     print "usage: python " + sys.argv[0] + " task_index"
     sys.exit(1)
@@ -51,6 +27,7 @@ total_run_num = 2000
 
 ps_hosts = ['10.58.53.16:2221']
 worker_hosts = ['10.58.53.16:2222', '10.58.53.16:2223']
+num_workers = len(worker_hosts)
 
 # 1. Create a cluster
 cluster = tf.train.ClusterSpec({"worker": worker_hosts, "ps": ps_hosts})
@@ -104,39 +81,55 @@ with tf.device(tf.train.replica_device_setter(
     global_step = tf.train.get_or_create_global_step()
 
     # 6. ******* (Method Specific) sync optimizer *******
-    train_op = tf.train.GradientDescentOptimizer(lr).minimize(loss, global_step = global_step)
+    replicas_to_aggregate = num_workers
+    optimizer = tf.train.GradientDescentOptimizer(lr)
+    sync_opt = tf.train.SyncReplicasOptimizer(
+            optimizer,
+            replicas_to_aggregate = replicas_to_aggregate,
+            total_num_replicas = num_workers,
+            variable_averages = None,
+            variables_to_average = None,
+            use_locking = True,
+            name = "sync_optimizer")
 
-    # 7. Create a Supervisor
-    init_op = tf.global_variables_initializer()
-    saver = tf.train.Saver()
+    train_op = sync_opt.minimize(loss, global_step = global_step)
 
-    sv = tf.train.Supervisor(
+    # ******* For Sync Optimizer *******
+    # init tokens & chief queue runners
+    #init_token_op = sync_opt.get_init_tokens_op()
+    #chief_queue_runner = sync_opt.get_chief_queue_runner()
+
+    # get local init op
+    #local_init_op = sync_opt.local_step_init_op
+    #if is_chief:
+    #    local_init_op = sync_opt.chief_init_op
+    #ready_for_local_init_op = sync_opt.ready_for_local_init_op
+
+    # 7. define stop steps. Will Stop after running given steps
+    sync_replicas_hook = sync_opt.make_session_run_hook(is_chief)
+    hooks = [sync_replicas_hook, tf.train.StopAtStepHook(last_step = total_run_num)]
+
+    # 8. Create a monitor session
+    # The MonitoredTrainingSession takes care of session initialization,
+    # restoring from a checkpoint, saving to a checkpoint, and closing when done
+    # or an error occurs.
+    with tf.train.MonitoredTrainingSession(
+            master = server.target,
             is_chief = is_chief,
-            logdir = './chk_point_asyn_sup/',
-            init_op = init_op,
-            summary_op=None,
-            saver = saver,
-            recovery_wait_secs = 1,
-            global_step = global_step)
+            checkpoint_dir = './chk_point_syn/',
+            hooks = hooks
+            ) as mon_sess:
 
-    # 8. Create a session
-    sess_config = tf.ConfigProto(
-            allow_soft_placement = True,
-            log_device_placement = False,
-            device_filters = ["/job:ps", "/job:worker/task:%d" % task_index])
-
-    # chief worker prepare session, while other workers wait the session to be created
-    with sv.prepare_or_wait_for_session(server.target, config = sess_config) as sess:
-        print "worker " + str(task_index) + " session completed"
-        # 9. Iterate total_run_num times
+        #if is_chief:
+        #    mon_sess.run(init_token_op)
+        # 9. Iterate total_run_num times (num of mon_sess.run)
         _W = 0
         _b = 0
         local_step = 0
-        cur_step = 0
-        while cur_step < total_run_num:
+        while not mon_sess.should_stop():
             # 10. ******* (Application Specific) Training Process *******
             x, y = data_generator.next()
-            _, cur_loss, cur_step, _W, _b = sess.run([train_op, loss, global_step, W, b], feed_dict = {X: x, Y: y})
+            _, cur_loss, cur_step, _W, _b = mon_sess.run([train_op, loss, global_step, W, b], feed_dict = {X: x, Y: y})
             local_step += 1
             print "loss: " + str(cur_loss) + ', step: ' + str(cur_step) + ' local_step: ' + str(local_step) + ', _W: ' + str(_W) + ', _b: ' + str(_b)
 
