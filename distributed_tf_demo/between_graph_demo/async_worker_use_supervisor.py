@@ -49,8 +49,8 @@ task_index = int(sys.argv[1])
 lr = 1e-2
 total_run_num = 2000
 
-ps_hosts = ['10.58.53.16:2221']
-worker_hosts = ['10.58.53.16:2222', '10.58.53.16:2223']
+ps_hosts = ['localhost:2221']
+worker_hosts = ['localhost:2222', 'localhost:2223']
 
 # 1. Create a cluster
 cluster = tf.train.ClusterSpec({"worker": worker_hosts, "ps": ps_hosts})
