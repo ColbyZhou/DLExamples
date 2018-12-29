@@ -16,6 +16,8 @@ Date:   2018/12/29 13:28:48
 import sys
 import os
 import pickle
+import pandas as pd
+import numpy as np
 
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn import cross_validation, metrics
@@ -24,13 +26,11 @@ from sklearn.grid_search import GridSearchCV
 from sklearn.tree import DecisionTreeClassifier
 from sklearn import tree
 
+from sklearn.ensemble.partial_dependence import plot_partial_dependence
+from sklearn.ensemble.partial_dependence import partial_dependence
 from matplotlib import pyplot as plt
 from IPython.display import Image
-
 import pydotplus
-
-import pandas as pd
-import numpy as np
 
 def train_gbm(train_X, train_Y):
 
@@ -41,7 +41,8 @@ def train_gbm(train_X, train_Y):
             subsample = 0.8,
             max_depth = 10,
             min_samples_split = 600,
-            min_samples_leaf = 100,
+            #min_samples_leaf = 100,
+            min_samples_leaf = 30,
             min_weight_fraction_leaf = 0., # must [0, 0.5]
             max_features = None, # sqrt, log2, auto
             max_leaf_nodes = None,
@@ -143,6 +144,7 @@ def plot_gbm(gbm, model_name, train_X, train_Y, test_X, test_Y, train_fea_name_l
     test_img_path = img_dir + 'roc_test_' + model_name + '.png'
     all_img_path = img_dir + 'roc_all_' + model_name + '.png'
     importance_img_path = img_dir + 'importance_' + model_name + '.png'
+    pdp_img_path = img_dir + 'pdp_' + model_name + '.png'
 
     train_fpr, train_tpr, train_auc, train_accuracy= data_predict(gbm, train_X, train_Y, train_img_path)
     test_fpr, test_tpr, test_auc, test_accuracy = data_predict(gbm, test_X, test_Y, test_img_path)
@@ -175,9 +177,19 @@ def plot_gbm(gbm, model_name, train_X, train_Y, test_X, test_Y, train_fea_name_l
     plt.yticks(pos, np.array(train_fea_name_list)[sorted_idx])
     plt.xlabel('Relative Importance')
     plt.title('Variable Importance')
-
     plt.legend()
     plt.savefig(importance_img_path)
+
+    # *************** plot partial dependence ***************
+    plt.figure()
+    fig, axs = plot_partial_dependence(gbrt = gbm, X = train_X, features = [
+        'PDnnSim', 'Bm25Sim', 'QueryLen', 'DocIdf', \
+        ('PDnnSim', 'Bm25Sim')
+        ],
+        feature_names = np.array(train_fea_name_list),
+        n_cols = 3, grid_resolution = 100, percentiles = (0.05, 0.95))
+    plt.legend()
+    plt.savefig(pdp_img_path)
 
 def main():
 
